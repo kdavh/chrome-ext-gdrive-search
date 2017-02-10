@@ -1,0 +1,29 @@
+{
+  "name": "Google Drive Advanced Search",
+  "description": "Add support to the omnibox to search the your Google Drive using gmail-like advanced search functions like 'in:folder-name'",
+  "version": "1.0",
+  "manifest_version": 2,
+  "minimum_chrome_version": "29",
+  "key": "NIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCDJB6ZGcGxtlr/34s+TKgi84QiP7DMekqOjSUS2ubmbhchlM6CN9gYdGQ1aBI3TBXG3YaAu+XyutFA8M8NLLWc4OOGByWaGV11DP6p67g8a+Ids/gX6cNSRnRHiDZXAd44ATxoN4OZjZJk9iQ26RIUjwX07bzntlI+frwwKCk4WQIDAQAB",
+  "permissions": [
+    "storage", "identity", "https://accounts.google.com/*", "https://www.googleapis.com/*"
+  ],
+  "oauth2": {
+    "client_id": "791942454765-8lgrg420en1p3rj621vkcpsf45lgl3hq.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/plus.me", "https://www.googleapis.com/auth/drive.metadata.readonly"]
+  },
+  "omnibox": {
+    "keyword": "gd"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "chrome_style": true,
+    "open_in_tab": true
+  },
+  "icons": {
+    "128": "drive-icon-128.png"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  }
+}
