@@ -1,4 +1,4 @@
-// require sampleSupport from support.js
+// require logger from support.js
 
 'use strict';
 
@@ -29,7 +29,7 @@ var googlePlusUserLoader = (function() {
         disableButton(revoke_button);
         break;
       case STATE_ACQUIRING_AUTHTOKEN:
-        sampleSupport.log('Acquiring token...');
+        logger.log('Acquiring token...');
         disableButton(signin_button);
         disableButton(xhr_button);
         disableButton(revoke_button);
@@ -95,37 +95,10 @@ var googlePlusUserLoader = (function() {
   function onUserInfoFetched(error, status, response) {
     if (!error && status == 200) {
       changeState(STATE_AUTHTOKEN_ACQUIRED);
-      sampleSupport.log(response);
-      var user_info = JSON.parse(response);
-      populateUserInfo(user_info);
+      logger.log(response);
     } else {
       changeState(STATE_START);
     }
-  }
-
-  function populateUserInfo(user_info) {
-    user_info_div.innerHTML = "Hello " + user_info.displayName;
-    fetchImageBytes(user_info);
-  }
-
-  function fetchImageBytes(user_info) {
-    if (!user_info || !user_info.image || !user_info.image.url) return;
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', user_info.image.url, true);
-    xhr.responseType = 'blob';
-    xhr.onload = onImageFetched;
-    xhr.send();
-  }
-
-  function onImageFetched(e) {
-    if (this.status != 200) return;
-    var imgElem = document.createElement('img');
-    var objUrl = window.webkitURL.createObjectURL(this.response);
-    imgElem.src = objUrl;
-    imgElem.onload = function() {
-      window.webkitURL.revokeObjectURL(objUrl);
-    }
-    user_info_div.insertAdjacentElement("afterbegin", imgElem);
   }
 
   // OnClick event handlers for the buttons.
@@ -153,10 +126,10 @@ var googlePlusUserLoader = (function() {
     // @see http://developer.chrome.com/apps/identity.html#method-getAuthToken
     chrome.identity.getAuthToken({ 'interactive': true }, function(token) {
       if (chrome.runtime.lastError) {
-        sampleSupport.log(chrome.runtime.lastError);
+        logger.log(chrome.runtime.lastError);
         changeState(STATE_START);
       } else {
-        sampleSupport.log('Token acquired:'+token+
+        logger.log('Token acquired:'+token+
           '. See chrome://identity-internals for details.');
         changeState(STATE_AUTHTOKEN_ACQUIRED);
       }
@@ -186,7 +159,7 @@ var googlePlusUserLoader = (function() {
 
           // Update the user interface accordingly
           changeState(STATE_START);
-          sampleSupport.log('Token revoked and removed from cache. '+
+          logger.log('Token revoked and removed from cache. '+
             'Check chrome://identity-internals to confirm.');
         }
     });
