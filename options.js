@@ -43,30 +43,30 @@ document.getElementById('save').addEventListener('click',
 
 window.onload = function () {
   signin_button = document.querySelector('#signin');
-  signin_button.addEventListener('click', googlePlusUserLoader.interactiveSignIn);
+  signin_button.addEventListener('click', googleApi.interactiveSignIn);
 
   xhr_button = document.querySelector('#getxhr');
-  xhr_button.addEventListener('click', googlePlusUserLoader.getUserInfo.bind(googlePlusUserLoader, true));
+  xhr_button.addEventListener('click', googleApi.getUserInfo.bind(googleApi, true));
 
   revoke_button = document.querySelector('#revoke');
-  revoke_button.addEventListener('click', googlePlusUserLoader.revokeToken);
+  revoke_button.addEventListener('click', googleApi.revokeToken);
 
   user_info_div = document.querySelector('#user_info');
 
-  googlePlusUserLoader.onStateChange = (state) => {
+  googleApi.onStateChange = (state) => {
     switch (state) {
-      case googlePlusUserLoader.STATE_START:
+      case googleApi.STATE_NO_AUTH:
         enableButton(signin_button);
         disableButton(xhr_button);
         disableButton(revoke_button);
         break;
-      case googlePlusUserLoader.STATE_ACQUIRING_AUTHTOKEN:
+      case googleApi.STATE_ACQUIRING_AUTHTOKEN:
         console.log('Acquiring token...');
         disableButton(signin_button);
         disableButton(xhr_button);
         disableButton(revoke_button);
         break;
-      case googlePlusUserLoader.STATE_AUTHTOKEN_ACQUIRED:
+      case googleApi.STATE_AUTHTOKEN_ACQUIRED:
         disableButton(signin_button);
         enableButton(xhr_button);
         enableButton(revoke_button);
@@ -76,5 +76,5 @@ window.onload = function () {
 
   // Trying to get user's info without signing in, it will work if the
   // application was previously authorized by the user.
-  googlePlusUserLoader.getUserInfo(false);
+  googleApi.getUserInfo(false);
 }

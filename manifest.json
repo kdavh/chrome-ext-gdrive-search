@@ -24,6 +24,6 @@
     "128": "drive-icon-128.png"
   },
   "background": {
-    "scripts": ["identity.js", "background.js"]
+    "scripts": ["googleApi.js", "background.js"]
   }
 }
