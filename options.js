@@ -76,5 +76,5 @@ window.onload = function () {
 
   // Trying to get user's info without signing in, it will work if the
   // application was previously authorized by the user.
-  googleApi.getUserInfo(false);
+  googleApi.getUserInfo();
 }

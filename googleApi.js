@@ -16,16 +16,35 @@ window.googleApi = (function() {
 
     if (self.onStateChange) {
       self.onStateChange(self.state)
-    } else {
-      console.log('googleApi: no state change callback provided, doing nothing')
     }
   }
 
-  function getUserInfo(interactive) {
+  function getUserInfo() {
     xhrWithAuth('GET',
       'https://www.googleapis.com/plus/v1/people/me',
-      interactive,
-      onUserInfoFetched);
+      (response) => console.log(response)
+    )
+  }
+
+  function getFileList(query, callback) {
+    // TODO: when for two separate words, make fullText ... or fullText
+    // extract in:... statements for in-folder searching
+    // when quoted words, group them into one fullText ... statement
+    // when in:... is in quotes, just search for it
+    // ....nested quotes....?
+    query = `fullText contains '${query}' and trashed = false`
+
+    console.log('query', query)
+    let search = `?pageSize=3&spaces=drive&q=${encodeURIComponent(query)}`
+    console.log('search', search)
+
+    xhrWithAuth('GET',
+      'https://www.googleapis.com/drive/v3/files' + search,
+      (response) => {
+        console.log(response)
+        callback(JSON.parse(response))
+      }
+    )
   }
 
   /**
@@ -44,7 +63,7 @@ window.googleApi = (function() {
     // will be opened when the user is not yet authenticated or not.
     // @see http://developer.chrome.com/apps/app_identity.html
     // @see http://developer.chrome.com/apps/identity.html#method-getAuthToken
-    chrome.identity.getAuthToken({ 'interactive': true }, function(token) {
+    chrome.identity.getAuthToken({ interactive: true }, function(token) {
       if (chrome.runtime.lastError) {
         console.log(chrome.runtime.lastError);
         changeState(self.STATE_NO_AUTH);
@@ -80,16 +99,16 @@ window.googleApi = (function() {
   }
 
   // private
-  function xhrWithAuth(method, url, interactive, callback) {
+  function xhrWithAuth(method, url, onSuccess) {
     var access_token;
     var retry = true;
 
     getToken();
 
     function getToken() {
-      chrome.identity.getAuthToken({ interactive: interactive }, function(token) {
+      chrome.identity.getAuthToken({ interactive: false }, function(token) {
         if (chrome.runtime.lastError) {
-          callback(chrome.runtime.lastError);
+          updateFromResponse(chrome.runtime.lastError);
           return;
         }
 
@@ -112,17 +131,17 @@ window.googleApi = (function() {
         chrome.identity.removeCachedAuthToken({ token: access_token },
                                               getToken);
       } else {
-        callback(null, this.status, this.response);
+        updateFromResponse(null, this.status, this.response, onSuccess);
       }
     }
-  }
 
-  function onUserInfoFetched(error, status, response) {
-    if (!error && status == 200) {
-      changeState(self.STATE_AUTHTOKEN_ACQUIRED);
-      console.log(response);
-    } else {
-      changeState(self.STATE_NO_AUTH);
+    function updateFromResponse(error, status, response, onSuccess) {
+      if (!error && status == 200) {
+        changeState(self.STATE_AUTHTOKEN_ACQUIRED);
+        onSuccess(response)
+      } else {
+        changeState(self.STATE_NO_AUTH);
+      }
     }
   }
 
@@ -130,6 +149,7 @@ window.googleApi = (function() {
   return Object.assign(self, {
     interactiveSignIn: interactiveSignIn,
     getUserInfo: getUserInfo,
-    revokeToken: revokeToken
+    revokeToken: revokeToken,
+    getFileList: getFileList
   })
 })();
