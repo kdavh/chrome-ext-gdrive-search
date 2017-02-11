@@ -1,48 +1,24 @@
-// require logger from support.js
-
 'use strict';
 
-var googlePlusUserLoader = (function() {
-
-  var STATE_START=1;
-  var STATE_ACQUIRING_AUTHTOKEN=2;
-  var STATE_AUTHTOKEN_ACQUIRED=3;
-
-  var state = STATE_START;
-
-  var signin_button, xhr_button, revoke_button, user_info_div;
-
- function disableButton(button) {
-    button.setAttribute('disabled', 'disabled');
+window.googlePlusUserLoader = (function() {
+  self = {
+    STATE_START: 1,
+    STATE_ACQUIRING_AUTHTOKEN: 2,
+    STATE_AUTHTOKEN_ACQUIRED: 3
   }
 
-  function enableButton(button) {
-    button.removeAttribute('disabled');
-  }
+  self.state = self.STATE_START;
 
   function changeState(newState) {
-    state = newState;
-    switch (state) {
-      case STATE_START:
-        enableButton(signin_button);
-        disableButton(xhr_button);
-        disableButton(revoke_button);
-        break;
-      case STATE_ACQUIRING_AUTHTOKEN:
-        logger.log('Acquiring token...');
-        disableButton(signin_button);
-        disableButton(xhr_button);
-        disableButton(revoke_button);
-        break;
-      case STATE_AUTHTOKEN_ACQUIRED:
-        disableButton(signin_button);
-        enableButton(xhr_button);
-        enableButton(revoke_button);
-        break;
+    self.state = newState;
+
+    if (self.onStateChange) {
+      self.onStateChange(self.state)
+    } else {
+      console.log('googlePlusUserLoader: no state change callback provided, doing nothing')
     }
   }
 
-  // @corecode_begin getProtectedData
   function xhrWithAuth(method, url, interactive, callback) {
     var access_token;
 
@@ -83,31 +59,21 @@ var googlePlusUserLoader = (function() {
 
   function getUserInfo(interactive) {
     xhrWithAuth('GET',
-                'https://www.googleapis.com/plus/v1/people/me',
-                interactive,
-                onUserInfoFetched);
+      'https://www.googleapis.com/plus/v1/people/me',
+      interactive,
+      onUserInfoFetched);
   }
-  // @corecode_end getProtectedData
 
-
-  // Code updating the user interface, when the user information has been
-  // fetched or displaying the error.
   function onUserInfoFetched(error, status, response) {
     if (!error && status == 200) {
-      changeState(STATE_AUTHTOKEN_ACQUIRED);
-      logger.log(response);
+      changeState(self.STATE_AUTHTOKEN_ACQUIRED);
+      console.log(response);
     } else {
-      changeState(STATE_START);
+      changeState(self.STATE_START);
     }
   }
 
-  // OnClick event handlers for the buttons.
-
   /**
-    Retrieves a valid token. Since this is initiated by the user
-    clicking in the Sign In button, we want it to be interactive -
-    ie, when no token is found, the auth window is presented to the user.
-    Observe that the token does not need to be cached by the app.
     Chrome caches tokens and takes care of renewing when it is expired.
     In that sense, getAuthToken only goes to the server if there is
     no cached token or if it is expired. If you want to force a new
@@ -115,10 +81,9 @@ var googlePlusUserLoader = (function() {
     you need to call removeCachedAuthToken()
   **/
   function interactiveSignIn() {
-    changeState(STATE_ACQUIRING_AUTHTOKEN);
+    changeState(self.STATE_ACQUIRING_AUTHTOKEN);
 
-    // @corecode_begin getAuthToken
-    // @description This is the normal flow for authentication/authorization
+    // This is the normal flow for authentication/authorization
     // on Google properties. You need to add the oauth2 client_id and scopes
     // to the app manifest. The interactive param indicates if a new window
     // will be opened when the user is not yet authenticated or not.
@@ -126,15 +91,14 @@ var googlePlusUserLoader = (function() {
     // @see http://developer.chrome.com/apps/identity.html#method-getAuthToken
     chrome.identity.getAuthToken({ 'interactive': true }, function(token) {
       if (chrome.runtime.lastError) {
-        logger.log(chrome.runtime.lastError);
-        changeState(STATE_START);
+        console.log(chrome.runtime.lastError);
+        changeState(self.STATE_START);
       } else {
-        logger.log('Token acquired:'+token+
+        console.log('Token acquired:'+token+
           '. See chrome://identity-internals for details.');
-        changeState(STATE_AUTHTOKEN_ACQUIRED);
+        changeState(self.STATE_AUTHTOKEN_ACQUIRED);
       }
     });
-    // @corecode_end getAuthToken
   }
 
   function revokeToken() {
@@ -143,47 +107,26 @@ var googlePlusUserLoader = (function() {
       function(current_token) {
         if (!chrome.runtime.lastError) {
 
-          // @corecode_begin removeAndRevokeAuthToken
-          // @corecode_begin removeCachedAuthToken
-          // Remove the local cached token
-          chrome.identity.removeCachedAuthToken({ token: current_token },
-            function() {});
-          // @corecode_end removeCachedAuthToken
+          chrome.identity.removeCachedAuthToken(
+            { token: current_token },
+            function() {}
+          )
 
-          // Make a request to revoke token in the server
           var xhr = new XMLHttpRequest();
           xhr.open('GET', 'https://accounts.google.com/o/oauth2/revoke?token=' +
                    current_token);
           xhr.send();
-          // @corecode_end removeAndRevokeAuthToken
 
-          // Update the user interface accordingly
-          changeState(STATE_START);
-          logger.log('Token revoked and removed from cache. '+
+          changeState(self.STATE_START);
+          console.log('Token revoked and removed from cache. '+
             'Check chrome://identity-internals to confirm.');
         }
     });
   }
 
-  return {
-    onload: function () {
-      signin_button = document.querySelector('#signin');
-      signin_button.addEventListener('click', interactiveSignIn);
-
-      xhr_button = document.querySelector('#getxhr');
-      xhr_button.addEventListener('click', getUserInfo.bind(xhr_button, true));
-
-      revoke_button = document.querySelector('#revoke');
-      revoke_button.addEventListener('click', revokeToken);
-
-      user_info_div = document.querySelector('#user_info');
-
-      // Trying to get user's info without signing in, it will work if the
-      // application was previously authorized by the user.
-      getUserInfo(false);
-    }
-  };
-
+  return Object.assign(self, {
+    interactiveSignIn: interactiveSignIn,
+    getUserInfo: getUserInfo,
+    revokeToken: revokeToken
+  })
 })();
-
-window.onload = googlePlusUserLoader.onload;

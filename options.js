@@ -28,7 +28,53 @@ function restore_options() {
   });
 }
 
+function disableButton(button) {
+  button.setAttribute('disabled', 'disabled');
+}
+
+function enableButton(button) {
+  button.removeAttribute('disabled');
+}
+
 document.addEventListener('DOMContentLoaded', restore_options);
 document.getElementById('save').addEventListener('click',
     save_options
 );
+
+window.onload = function () {
+  signin_button = document.querySelector('#signin');
+  signin_button.addEventListener('click', googlePlusUserLoader.interactiveSignIn);
+
+  xhr_button = document.querySelector('#getxhr');
+  xhr_button.addEventListener('click', googlePlusUserLoader.getUserInfo.bind(googlePlusUserLoader, true));
+
+  revoke_button = document.querySelector('#revoke');
+  revoke_button.addEventListener('click', googlePlusUserLoader.revokeToken);
+
+  user_info_div = document.querySelector('#user_info');
+
+  googlePlusUserLoader.onStateChange = (state) => {
+    switch (state) {
+      case googlePlusUserLoader.STATE_START:
+        enableButton(signin_button);
+        disableButton(xhr_button);
+        disableButton(revoke_button);
+        break;
+      case googlePlusUserLoader.STATE_ACQUIRING_AUTHTOKEN:
+        console.log('Acquiring token...');
+        disableButton(signin_button);
+        disableButton(xhr_button);
+        disableButton(revoke_button);
+        break;
+      case googlePlusUserLoader.STATE_AUTHTOKEN_ACQUIRED:
+        disableButton(signin_button);
+        enableButton(xhr_button);
+        enableButton(revoke_button);
+        break;
+    }
+  }
+
+  // Trying to get user's info without signing in, it will work if the
+  // application was previously authorized by the user.
+  googlePlusUserLoader.getUserInfo(false);
+}
