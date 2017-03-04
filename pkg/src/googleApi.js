@@ -26,27 +26,100 @@ window.googleApi = (function() {
     )
   }
 
-  function getFileList(query, callback) {
+  // (query: String) => Promise
+  function getFileList(query) {
     // TODO: when for two separate words, make fullText ... or fullText
-    // extract in:... statements for in-folder searching
+    // extract in:... statements for in-dir searching
     // when quoted words, group them into one fullText ... statement
     // when in:... is in quotes, just search for it
     // ....nested quotes....?
-    query = `fullText contains '${query}' and trashed = false`
 
-    console.log('query', query)
-    let search = `?pageSize=3&spaces=drive&q=${encodeURIComponent(query)}`
-    console.log('search', search)
+    let requestedDirs = []
 
-    xhrWithAuth('GET',
-      'https://www.googleapis.com/drive/v3/files' + search,
-      (response) => {
-        console.log(response)
-        callback(JSON.parse(response))
-      }
-    )
+    let reInDir = /in:\S+/g
+
+    query.replace(reInDir, (match, i) => {
+      requestedDirs.push(
+        {
+          pathSegments: match.replace('in:', '').split('/').map(
+            n => ({ name: n, possibleIds: [] })
+          )
+        }
+      )
+
+      return ""
+    })
+
+    return Promise.all(requestedDirs.map(dir => _resolveDirIds(dir)))
   }
 
+  // mutates `dir` object with response
+  async function _resolveDirIds(dir) {
+    for (let i = 0; i++; i < dir.pathSegments.length) {
+      let segment = dir.pathSegments[i]
+      let parentSegment = dir.pathSegments[i - 1]
+
+      let apiQuery = {
+        fileType: 'folder',
+        nameEq: segment.name
+      }
+
+      if (parentSegment) {
+        apiQuery.parentIdIn = parentSegment.possibleIds
+      }
+
+      let resp = await _request(apiQuery)
+
+      let possibleIds = resp.files.map(f => f.Id)
+
+      if (possibleIds.length) {
+        segment.possibleIds = possibleIds
+      } else {
+        // folder path doesn't exist, return early, resolving async func promise
+        return false
+      }
+    }
+
+    // all lookups were successful, return true. dir objects have been updated accordingly
+    return true
+  }
+
+  function _request(query) {
+    return new Promise((resolve, reject) => {
+      let searchQ = `
+        trashed = false and
+        mimeType = 'application/vnd.google-apps.${query.fileType}' and
+      `
+
+      if (query.nameEq) {
+        searchQ +=  `and name = ${query.name}`
+      }
+
+      if (query.fullTextContains) {
+        searchQ += `and fullText contains '${query.fullTextContains}'`
+      }
+
+      if (query.parentIdIn) {
+        let orParents = parentIdIn.map(id => `'${id}' in parents`).join(' or ')
+        searchQ += `and (${orParents})`
+      }
+
+      console.log('searchQ', searchQ)
+
+      let search = `?spaces=drive&pageSize=10&q=${encodeURIComponent(searchQ)}`
+
+      console.log('search', search)
+
+      xhrWithAuth('GET',
+        `https://www.googleapis.com/drive/v3/files${search}`,
+        (response) => {
+          console.log('api response', response)
+
+          resolve(JSON.parse(response))
+        }
+      )
+    })
+  }
   /**
     Chrome caches tokens and takes care of renewing when it is expired.
     In that sense, getAuthToken only goes to the server if there is
@@ -100,6 +173,11 @@ window.googleApi = (function() {
 
   // private
   function xhrWithAuth(method, url, onSuccess) {
+    if (mocked) {
+      console.log('mock request', { method, url })
+      return
+    }
+
     var access_token;
     var retry = true;
 
