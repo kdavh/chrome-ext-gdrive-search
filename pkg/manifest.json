@@ -16,7 +16,7 @@
     "keyword": "gd"
   },
   "options_ui": {
-    "page": "options.html",
+    "page": "src/options.html",
     "chrome_style": true,
     "open_in_tab": true
   },
@@ -24,6 +24,6 @@
     "128": "drive-icon-128.png"
   },
   "background": {
-    "scripts": ["googleApi.js", "background.js"]
+    "scripts": ["src/googleApi.js", "src/background.js"]
   }
 }
