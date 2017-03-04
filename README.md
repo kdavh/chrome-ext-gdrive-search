@@ -1,3 +1,6 @@
+## Chrome Extension for better Google Drive search
+  WIP
+  Search scoped by folder, like gmail "in:..." or "label:..." queries
 ### resources
   Developer console to turn on project and permissions: https://console.developers.google.com/apis
 
